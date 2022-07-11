@@ -1,4 +1,5 @@
-import { Gallery } from './interfaces';
+import { Gallery, Manga } from './interfaces';
+import { galleryStorage } from './storage';
 
 const apiUrl = 'https://graphql.anilist.co/';
 
@@ -27,21 +28,21 @@ const mangaQuery = `query Manga($search: String!) {
   }
 }`;
 
-export const checkGalleries = (galleries: Gallery[]) => {
-  galleries.forEach(async (it) => {
-    if (it.manga == null) {
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          query: mangaQuery,
-          variables: { search: it.name },
-        }),
-      });
-      console.log('ANILIST', res);
-    }
-  });
+export const checkGallery = async (gallery: Gallery) => {
+  if (gallery.manga == null) {
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        query: mangaQuery,
+        variables: { search: gallery.name },
+      }),
+    });
+    const data: Manga = (await res.json()).data.Media;
+    galleryStorage.updateItem({ ...gallery, manga: data });
+    console.log('ANILIST', data);
+  }
 };

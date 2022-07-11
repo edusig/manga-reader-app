@@ -1,68 +1,81 @@
+import { ThemeProvider } from '@emotion/react';
+import { ActionSheetProvider } from '@expo/react-native-action-sheet';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { View } from 'react-native';
-import { DownloadModal } from './src/components/download-modal';
-import { Galleries } from './src/components/galleries';
+import { Pressable } from 'react-native';
 import { useSyncDirs } from './src/hooks/use-sync-dirs';
-import { checkGalleries } from './src/lib/anilist';
-import { getGalleries, localGallerySave } from './src/lib/db';
-import { downloadQueue } from './src/lib/download_queue';
-import { Gallery, LocalAPIResponse } from './src/lib/interfaces';
+import { NO_HEADER } from './src/lib/constants';
+import { RootStackParamList } from './src/lib/interfaces';
+import { theme } from './src/lib/theme';
+import { DownloadScreen } from './src/screens/download';
+import { DownloadGalleryScreen } from './src/screens/download-gallery';
+import { GalleryScreen } from './src/screens/gallery';
+import { HomeScreen } from './src/screens/home';
+import { ChapterReadScreen } from './src/screens/read';
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   useSyncDirs();
-  const [currentGallery, setCurrentGallery] = useState<Gallery | null>(null);
-  const [galleries, setGalleries] = useState<Gallery[]>([]);
-  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
-  const [local, setLocal] = useState<LocalAPIResponse | undefined>();
-
-  const handleSearchLocal = async (url: string) => {
-    const res = await fetch(url);
-    const data: LocalAPIResponse = await res.json();
-    setLocal(data);
-    console.log(data);
-  };
-
-  const handleAddLocal = async (index: number, url: string) => {
-    const item = local?.data[index];
-    if (item == null) return;
-
-    try {
-      await localGallerySave(item, url);
-    } catch (e) {
-      console.error(e);
-    }
-
-    downloadQueue.start();
-  };
-
-  useEffect(() => {
-    const initialize = async () => {
-      const res = await getGalleries();
-      console.log(res);
-      setGalleries(res.rows._array);
-      checkGalleries(res.rows._array);
-    };
-    initialize();
-  }, []);
-
   return (
-    <>
-      {currentGallery == null ? (
-        <Galleries galleries={galleries} onDownload={() => setDownloadModalOpen(true)} />
-      ) : (
-        <View />
-      )}
-      <StatusBar style="auto" />
-      <DownloadModal
-        open={downloadModalOpen}
-        local={local}
-        onClose={() => {
-          setDownloadModalOpen(false);
-        }}
-        onSearch={handleSearchLocal}
-        onAdd={handleAddLocal}
-      />
-    </>
+    <ActionSheetProvider>
+      <ThemeProvider theme={theme}>
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName="Home"
+            screenOptions={{
+              headerStyle: {
+                backgroundColor: theme.palette.background,
+              },
+              headerTitleStyle: {
+                color: theme.palette.primaryText,
+              },
+              headerTintColor: theme.palette.primaryText,
+              contentStyle: {
+                backgroundColor: theme.palette.background,
+              },
+            }}
+          >
+            <Stack.Screen
+              name="Home"
+              component={HomeScreen}
+              options={({ navigation }) => ({
+                title: 'Galleries',
+                headerRight: () => (
+                  <Pressable onPress={() => navigation.push('Download')}>
+                    <MaterialCommunityIcons
+                      name="download"
+                      size={24}
+                      color={theme.palette.primaryText}
+                    />
+                  </Pressable>
+                ),
+              })}
+            />
+            <Stack.Screen
+              name="Download"
+              component={DownloadScreen}
+              options={{ title: 'Downloads' }}
+            />
+            <Stack.Screen
+              name="DownloadGallery"
+              component={DownloadGalleryScreen}
+              options={({ route }) => ({
+                title: `Download - ${route.params.apiData.name}`,
+              })}
+            />
+            <Stack.Screen
+              name="Gallery"
+              component={GalleryScreen}
+              options={({ route }) => ({ title: `${route.params.gallery.name}` })}
+            />
+            <Stack.Screen name="Read" component={ChapterReadScreen} options={NO_HEADER} />
+          </Stack.Navigator>
+          <StatusBar style="light" />
+        </NavigationContainer>
+      </ThemeProvider>
+    </ActionSheetProvider>
   );
 }

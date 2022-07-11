@@ -1,16 +1,22 @@
-export interface Gallery {
-  id: number;
+export interface Chapter {
   name: string;
   path: string;
-  dirs_count: number;
-  files_count: number;
-  last_read_at?: Date;
-  last_read_dir?: string;
-  last_read_item?: string;
-  manga?: string;
-  manga_ref?: Manga;
-  download_left?: number;
+  pages: string[];
+  read: boolean;
+  currentPage: number;
 }
+
+export interface Gallery extends Node {
+  name: string;
+  path: string;
+  dirsCount: number;
+  filesCount: number;
+  lastReadAt?: Date;
+  chapters: Chapter[];
+  manga?: Manga;
+}
+
+export type GalleryInput = Omit<Gallery, 'id'>;
 
 export enum MangaStatus {
   FINISHED = 'FINISHED',
@@ -20,34 +26,38 @@ export enum MangaStatus {
   HIATUS = 'HIATUS',
 }
 
-export interface Manga {
-  id: number;
-  id_mal: number;
+export interface Manga extends Node {
+  idMal: number;
   status: MangaStatus;
   description: string;
-  chapters: number;
-  cover_xlarge: string;
-  cover_large: string;
-  cover_medium: string;
-  cover_color: string;
-  banner: string;
+  chapters?: number;
+  coverImage: {
+    color: string;
+    xlarge: string;
+    large: string;
+    medium: string;
+  };
+  bannerImage: string;
   genres: string[];
   synonyms: string[];
   average_score: number;
   favorites: number;
   site_url: string;
+  title: {
+    english: string;
+  };
 }
 
 export interface LocalAPIData {
-  count: number;
   fullPath: string;
   name: string;
-  files: {
-    count: number;
-    fullPath: string;
-    name: string;
-    files: string[];
-  }[];
+  files: LocalAPIDataFiles[];
+}
+
+export interface LocalAPIDataFiles {
+  fullPath: string;
+  name: string;
+  files: string[];
 }
 
 export interface LocalAPIResponse {
@@ -61,3 +71,29 @@ export interface DownloadQueueItem {
   error: boolean;
   api_url: string;
 }
+
+export interface Indexer {
+  lastId: number;
+  collection: string[];
+}
+
+export interface Node {
+  id: number;
+}
+
+export type RootStackParamList = {
+  Home: undefined;
+  Download: undefined;
+  DownloadGallery: {
+    url: string;
+    gallery?: Gallery;
+    apiData: LocalAPIData;
+  };
+  Gallery: {
+    gallery: Gallery;
+  };
+  Read: {
+    gallery: Gallery;
+    chapter: Chapter;
+  };
+};
