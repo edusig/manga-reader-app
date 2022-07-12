@@ -30,7 +30,6 @@ class Storage<CollectionType extends Node = Node> {
   async setup() {
     await this.setupIndexer();
     this.collection = await this.setupCollection();
-    console.log('COLLECTION', this.collection);
     this.emit(StorageEventType.COLLECTION_CHANGE);
   }
 
@@ -146,7 +145,6 @@ class Storage<CollectionType extends Node = Node> {
   }
 
   private emit(event: StorageEventType) {
-    console.log('EMITTING', event, this.listeners);
     this.listeners.forEach((fn) => fn(event, this.collection));
   }
 }

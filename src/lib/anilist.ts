@@ -43,6 +43,5 @@ export const checkGallery = async (gallery: Gallery) => {
     });
     const data: Manga = (await res.json()).data.Media;
     galleryStorage.updateItem({ ...gallery, manga: data });
-    console.log('ANILIST', data);
   }
 };

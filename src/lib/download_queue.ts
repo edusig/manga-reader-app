@@ -25,8 +25,6 @@ class DownloadQueue {
         `${item.api_url}/download?file=${encodeURIComponent(item.path)}`,
         `${directoriesPath}/${item.path}`,
       );
-      console.log('DOWNLOADED', item);
-      console.log('DOWNLOADED TO', `${directoriesPath}/${item.path}`);
     } else {
       await this.getNewQueueItems();
     }
@@ -34,7 +32,6 @@ class DownloadQueue {
   }
 
   private async getNewQueueItems() {
-    console.log('EMPTY QUEUE, GETTING MORE ITEMS...');
     const downloadQ = await getDownloadQueue();
     const newItems = downloadQ.rows._array.map(
       (it): DownloadQueueItem => ({
@@ -45,7 +42,6 @@ class DownloadQueue {
       }),
     );
     if (newItems.length === 0 && this.queue.length === 0) {
-      console.log('NO MORE ITEMS, STOPPING QUEUE');
       this.running = false;
     } else {
       this.queue = this.queue.concat(newItems);

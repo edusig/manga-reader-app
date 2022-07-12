@@ -92,22 +92,6 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
     ]);
   };
 
-  // const handlePageVisibilityChange = useCallback(
-  //   (info: { viewableItems: Array<ViewToken>; changed: Array<ViewToken> }) => {
-  //     console.log('PAGE CHANGED', info);
-  //   },
-  //   [],
-  // );
-
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     console.log('CURRENT PAGE', curPage);
-  //   }, 10000);
-  //   return () => {
-  //     clearInterval(interval);
-  //   };
-  // }, []);
-
   return (
     <FlatList
       data={chapter.pages}
@@ -116,10 +100,6 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
       onEndReachedThreshold={0}
       keyExtractor={(it) => it}
       ref={listRef as any}
-      // onViewableItemsChanged={handlePageVisibilityChange}
-      // viewabilityConfig={{
-      //   itemVisiblePercentThreshold: 50,
-      // }}
     />
   );
 };
