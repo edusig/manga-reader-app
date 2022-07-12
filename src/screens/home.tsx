@@ -1,9 +1,12 @@
 import styled from '@emotion/native';
 import { useActionSheet } from '@expo/react-native-action-sheet';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { FC, useMemo } from 'react';
+import format from 'date-fns/format';
+import isBefore from 'date-fns/isBefore';
+import { FC, useMemo, useState } from 'react';
 import {
   Alert,
+  Button,
   FlatList,
   Image,
   ListRenderItemInfo,
@@ -58,6 +61,43 @@ const GalleryImage = styled(Image)`
   height: 120px;
 `;
 
+const ListHeader = styled.View`
+  justify-content: space-between;
+  flex-direction: row;
+`;
+
+enum SortKind {
+  NAME = 'Name',
+  LAST_READ = 'Last Read',
+  CHAPTER_COUNT = 'Chapter Count',
+}
+
+enum SortOrder {
+  ASC = 'Asc',
+  DESC = 'Desc',
+}
+
+const sortKinds: Record<SortKind, { sort: (a: Gallery, b: Gallery) => number }> = {
+  [SortKind.NAME]: {
+    sort: (a: Gallery, b: Gallery) => a.name.localeCompare(b.name, 'en'),
+  },
+  [SortKind.LAST_READ]: {
+    sort: (a: Gallery, b: Gallery) => {
+      if (a.lastReadAt != null && b.lastReadAt != null) {
+        return isBefore(new Date(b.lastReadAt), new Date(a.lastReadAt)) ? -1 : 1;
+      } else if (a.lastReadAt == null) {
+        return 1;
+      } else if (b.lastReadAt == null) {
+        return -1;
+      }
+      return 0;
+    },
+  },
+  [SortKind.CHAPTER_COUNT]: {
+    sort: (a: Gallery, b: Gallery) => a.chapters.length - b.chapters.length,
+  },
+};
+
 const GalleryItem: FC<{
   gallery: Gallery;
   onPress: () => void;
@@ -68,6 +108,10 @@ const GalleryItem: FC<{
       <GalleryImage source={{ uri: gallery.manga?.coverImage.medium, width: 80, height: 120 }} />
       <GalleryContent>
         <GalleryTitle allowFontScaling>{gallery.name}</GalleryTitle>
+        <SecondaryText allowFontScaling>
+          {gallery.chapters.length} chapters -{' '}
+          {gallery.lastReadAt != null ? format(new Date(gallery.lastReadAt), 'Pp') : 'Never read'}
+        </SecondaryText>
         <SecondaryText allowFontScaling>{gallery.manga?.genres.join(', ')}</SecondaryText>
       </GalleryContent>
       <GalleryItemNumberContainer>
@@ -83,10 +127,12 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
   const dimensions = useWindowDimensions();
   const galleries = useGalleries();
   const { showActionSheetWithOptions } = useActionSheet();
-  const sortedGalleries = useMemo(
-    () => galleries.sort((a, b) => a.name.localeCompare(b.name, 'en')),
-    [galleries],
-  );
+  const [sortKind, setSortKind] = useState<SortKind>(SortKind.NAME);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.ASC);
+  const sortedGalleries = useMemo(() => {
+    const sorted = galleries.slice(0).sort(sortKinds[sortKind].sort);
+    return sortOrder === SortOrder.DESC ? sorted.reverse() : sorted;
+  }, [galleries, sortKind, sortOrder]);
 
   const handleDeleteGallery = (id: number) => () => {
     galleryStorage.removeItem(id);
@@ -131,6 +177,36 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
       },
     );
   };
+  const handleSort = () => {
+    showActionSheetWithOptions(
+      {
+        options: Object.keys(sortKinds).concat(['Cancel']),
+        cancelButtonIndex: 3,
+        userInterfaceStyle: 'dark',
+        title: 'Choose the sorting key',
+      },
+      (index) => {
+        if (index != null && index < 3) {
+          setSortKind(Object.keys(sortKinds)[index] as SortKind);
+          setSortOrder(SortOrder.ASC);
+        }
+      },
+    );
+  };
+  const handleSortOrder = () => {
+    showActionSheetWithOptions(
+      {
+        options: ['Asc', 'Desc', 'Cancel'],
+        cancelButtonIndex: 2,
+        userInterfaceStyle: 'dark',
+        title: 'Choose the sorting order',
+      },
+      (index) => {
+        if (index === 0) setSortOrder(SortOrder.ASC);
+        if (index === 1) setSortOrder(SortOrder.DESC);
+      },
+    );
+  };
   const renderItem = (it: ListRenderItemInfo<Gallery>) => (
     <GalleryItem
       gallery={it.item}
@@ -140,10 +216,14 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
   );
   return (
     <SafeAreaView style={{ height: dimensions.height - 60 }}>
+      <ListHeader>
+        <Button title={`Order by: ${sortKind}`} onPress={handleSort} />
+        <Button title={`Order direction: ${sortOrder}`} onPress={handleSortOrder} />
+      </ListHeader>
       <FlatList
         data={sortedGalleries}
         renderItem={renderItem}
-        keyExtractor={(it) => it.name}
+        keyExtractor={(it) => it.id.toString()}
         ListEmptyComponent={<EmptyText>No galleries found.</EmptyText>}
         contentContainerStyle={{ paddingBottom: 40 }}
       />

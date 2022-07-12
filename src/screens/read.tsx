@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { DEFAULT_DIRECTORIES_PATH, NO_HEADER } from '../lib/constants';
-import { readChapter, updateLastReadAt } from '../lib/gallery';
+import { readChapter } from '../lib/gallery';
 import { RootStackParamList } from '../lib/interfaces';
 import { PrimaryText } from '../lib/style';
 import { theme } from '../lib/theme';
@@ -84,7 +84,6 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
         style: 'default',
         text: 'Next',
         onPress: () => {
-          updateLastReadAt(gallery);
           readChapter(gallery, index);
           navigation.replace('Read', { chapter: nextChapter, gallery });
         },

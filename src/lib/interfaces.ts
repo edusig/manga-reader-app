@@ -11,7 +11,7 @@ export interface Gallery extends Node {
   path: string;
   dirsCount: number;
   filesCount: number;
-  lastReadAt?: Date;
+  lastReadAt?: string;
   chapters: Chapter[];
   manga?: Manga;
 }
@@ -40,7 +40,7 @@ export interface Manga extends Node {
   bannerImage: string;
   genres: string[];
   synonyms: string[];
-  average_score: number;
+  averageScore: number;
   favorites: number;
   site_url: string;
   title: {
