@@ -91,10 +91,10 @@ const LocalGallery: FC<{
   index: number;
   gallery?: Gallery;
 }> = ({ data, gallery, onSelect, onAdd }) => {
-  const allDownloaded = useMemo(
-    () => (gallery?.chapters.length ?? 0) >= data.files.length,
-    [gallery, data],
-  );
+  const allDownloaded = useMemo(() => {
+    const chapterNames = gallery?.chapters.map((it) => it.name);
+    return data.files.every((it) => chapterNames?.includes(it.name));
+  }, [gallery, data]);
   return (
     <GalleryItem onPress={() => onSelect(data)}>
       <GalleryItemTitle>

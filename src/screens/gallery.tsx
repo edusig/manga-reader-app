@@ -74,7 +74,7 @@ export const GalleryScreen: FC<GalleryViewProps> = ({ route, navigation }) => {
     () =>
       (gallery.chapters ?? [])
         .slice(0)
-        .sort((a: Chapter, b: Chapter) => a.name.localeCompare(b.name, 'en')),
+        .sort((a: Chapter, b: Chapter) => a.name.localeCompare(b.name, 'en', { numeric: true })),
     [gallery],
   );
   const resetSelection = () => {

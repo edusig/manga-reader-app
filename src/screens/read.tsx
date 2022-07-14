@@ -40,7 +40,6 @@ const directoriesPath = `${FileSystem.documentDirectory}${DEFAULT_DIRECTORIES_PA
 
 export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigation }) => {
   const { chapter, gallery } = route.params;
-  const [curPage, setCurPage] = useState(0);
   const listRef = useRef<FlatList<string>>();
   const dimensions = useWindowDimensions();
   const [show, setShow] = useState(false);
@@ -84,7 +83,7 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
         style: 'default',
         text: 'Next',
         onPress: () => {
-          readChapter(gallery, index);
+          readChapter(gallery.id, index);
           navigation.replace('Read', { chapter: nextChapter, gallery });
         },
       },

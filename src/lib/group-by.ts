@@ -7,8 +7,8 @@ export const groupBy = <InputType extends Record<string, unknown> | Object, Outp
 ): Record<string, OutputType> =>
   input.reduce((acc, it) => {
     const itKey = resolvePath(it, key, null);
-    if (typeof itKey === 'string') {
-      return { ...acc, [itKey]: valueFn != null ? valueFn(it) : it };
+    if (typeof itKey === 'string' || typeof itKey === 'number') {
+      return { ...acc, [itKey.toString()]: valueFn != null ? valueFn(it) : it };
     }
     return acc;
   }, {});

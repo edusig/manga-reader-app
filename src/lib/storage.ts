@@ -79,7 +79,7 @@ class Storage<CollectionType extends Node = Node> {
     return this.collection;
   }
 
-  getCollectionById() {
+  getCollectionById(): Record<string, CollectionType> {
     return groupBy(this.collection, 'id');
   }
 

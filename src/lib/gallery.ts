@@ -13,7 +13,9 @@ const mangaStatusLabelDict: Record<MangaStatus, string> = {
 
 const directoriesPath = `${FileSystem.documentDirectory}${DEFAULT_DIRECTORIES_PATH}`;
 
-export const readChapter = (gallery: Gallery, chapterIndex: number) => {
+export const readChapter = (galleryId: number, chapterIndex: number) => {
+  const galleryById = galleryStorage.getCollectionById();
+  const gallery = galleryById[galleryId.toString()];
   const newChapters = gallery.chapters.slice(0);
   newChapters.splice(chapterIndex, 1, { ...gallery.chapters[chapterIndex], read: true });
   const newGallery = { ...gallery, lastReadAt: new Date().toString(), chapters: newChapters };
@@ -58,7 +60,7 @@ export const upsertGallery = (gallery: GalleryInput) => {
       chapters: [
         ...found.chapters,
         ...gallery.chapters.filter((it) => !foundChapterNames.includes(it.name)),
-      ],
+      ].sort((a: Chapter, b: Chapter) => a.name.localeCompare(b.name, 'en', { numeric: true })),
     };
     return galleryStorage.updateItem(merge);
   }
