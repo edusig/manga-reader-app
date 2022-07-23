@@ -3,10 +3,11 @@ const fs = require('fs');
 const url = require('url');
 const path = require('path');
 const os = require('os');
-const qrcode = require('qrcode-terminal');
 const { fdir } = require('fdir');
 
-const manga_dir = '/Users/work/Manga';
+const argDir = process.argv[2];
+const rootDir = path.resolve(__dirname, argDir ?? '.');
+
 const extToMimeDict = {
   jpeg: 'image/jpeg',
   jpg: 'image/jpeg',
@@ -24,38 +25,13 @@ const jsonReplacer = (_, v) => {
   return v;
 };
 
-const dirWalkOld = (currentDir, depth = 2) => {
-  const root = path.join(manga_dir, currentDir);
-  const dirs = fs.readdirSync(root);
-  dirs
-    .filter((it) => !it.startsWith('_') && it !== '.DS_Store')
-    .sort((a, b) => {
-      return a.localeCompare(b, 'en', { numeric: true });
-    })
-    .map((it) => {
-      const subpath = path.join(root, it);
-      const localPath = path.join(currentDir, it);
-      if (depth > 0 && fs.existsSync(subpath) && fs.lstatSync(subpath).isDirectory()) {
-        const subdirs = dirWalk(localPath, depth - 1);
-        return {
-          name: it,
-          files: subdirs,
-          count: subdirs.length,
-          fullPath: localPath,
-        };
-      }
-      return it;
-    });
-  return dirs;
-};
-
 /**
  *
  * @param {string} root
  * @param {number} depth
  */
 const dirWalk = async (currentDir, depth = 2) => {
-  const root = path.join(manga_dir, currentDir);
+  const root = path.join(rootDir, currentDir);
   const dirs = await new fdir()
     .crawlWithOptions(root, {
       filters: [(path) => !path.includes('.DS_Store')],
@@ -102,7 +78,7 @@ const listDirs = async (res) => {
  */
 const download = async (req, res) => {
   if (req.url.startsWith('/favicon.ico')) return res.end();
-  const subpath = path.join(manga_dir, decodeURIComponent(req.url));
+  const subpath = path.join(rootDir, decodeURIComponent(req.url));
   try {
     const stat = await fs.promises.lstat(subpath);
     const ext = path.extname(subpath).replace('.', '');
@@ -136,12 +112,10 @@ const requestListener = async (req, res) => {
 const server = http.createServer(requestListener);
 server.listen(9090);
 console.log('listening on port 9090');
+console.log('serving files from', rootDir);
 
 const localIp = Object.values(os.networkInterfaces())
   .flat()
   .find((it) => it.family === 'IPv4' && it.address.startsWith('192.168')).address;
 const serverUrl = `http://${localIp}:9090`;
 console.log(`Server url:\n${serverUrl}`);
-qrcode.generate(serverUrl, (generated) => {
-  console.log(generated);
-});
