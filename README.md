@@ -6,7 +6,7 @@ the manga information from [anilist](https://anilist.co/)
 
 ## How to use
 
-[Use directly in the Expo Go App](https://expo.dev/@edusig/image-gallery) or run locally
+[Use directly in the Expo Go App](https://expo.dev/@edusig/manga-reader-app) or run locally
 
 ### Run locally
 
