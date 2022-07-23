@@ -48,3 +48,53 @@ npm run start:api /path/to/files/directory
 # or
 yarn start:api /path/to/files/directory
 ```
+
+#### Run your own file server
+
+The app expects the API to have 1 main endpoint and a static file server.
+
+- `/api` should return with the signature bellow
+- every other route should serve static files
+
+The app will use the paths returned by the `/api` route to download the pages of a selected manga
+and/or chapter. For example: If you choose to download "Chapter 1" from "Example Manga" it will
+download the first page from `/Example Manga/Chapter 1/01.jpg`
+
+##### Expected /api response interface
+
+```ts
+interface ApiResponse {
+  // An array of mangas
+  data: Array<{
+    name: string;
+    // Path of to the manga e.g. "Example Manga"
+    fullPath: string;
+    // An array of chapters
+    files: Array<{
+      name: string;
+      // Path including the manga path e.g. "Example Manga/Chapter 1"
+      fullPath: string;
+      // An array of pages
+      files: string[];
+    }>;
+  }>;
+}
+```
+
+##### Example of a /api response
+
+```json
+{
+  "data": [
+    "name": "Example Manga",
+    "fullPath": "Example Manga",
+    "files": [
+      {
+        "name": "Chapter 1",
+        "fullPath": "Example Manga/Chapter 1",
+        "files": ["01.jpg", "02.jpg", "03.jpg"]
+      }
+    ]
+  ]
+}
+```
