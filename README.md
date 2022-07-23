@@ -6,13 +6,13 @@ the manga information from [anilist](https://anilist.co/)
 
 ## How to use
 
-[Use directly in the Expo Go App](exp://exp.host/@edusig/image-gallery) or run locally
+[Use directly in the Expo Go App](https://expo.dev/@edusig/image-gallery) or run locally
 
 ### Run locally
 
 #### Clone the repository
 
-`git clone git@github.com:edusig/image-gallery.git`
+`git clone git@github.com:edusig/manga-reader-app.git`
 
 #### Install the dependencies
 
