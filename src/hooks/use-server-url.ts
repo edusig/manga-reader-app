@@ -2,10 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { LocalAPIResponse } from '../lib/interfaces';
 
-export const useServerUrl = () => {
+export interface UseServerUrlOptions {
+  onSuccess?: <APIResponse = LocalAPIResponse>(data: APIResponse) => void;
+}
+
+export const useServerUrl = <APIResponse = LocalAPIResponse>(options?: UseServerUrlOptions) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [local, setLocal] = useState<LocalAPIResponse | undefined>();
+  const [local, setLocal] = useState<APIResponse | undefined>();
   const handleSetUrl = async (newUrl: string) => {
     setUrl(newUrl);
     if (newUrl !== url) {
@@ -24,8 +28,9 @@ export const useServerUrl = () => {
     setLoading(true);
     try {
       const res = await fetch(`${newUrl ?? url}/api`);
-      const data: LocalAPIResponse = await res.json();
+      const data: APIResponse = await res.json();
       setLocal(data);
+      if (options?.onSuccess != null) options.onSuccess(data);
     } catch (e) {
       console.error(e);
     } finally {

@@ -81,8 +81,56 @@ export interface Node {
   id: number;
 }
 
+export interface DiscoverAPIResponse<DataType extends {} = Record<string, unknown>> {
+  data?: DataType;
+  errors?: string[];
+}
+
+export interface DiscoverListData {
+  id: number;
+  title: string;
+  slug: string;
+  image?: string;
+  genres: string;
+  latestChapter: number;
+}
+
+export interface DiscoverMangaData {
+  id: number;
+  chapters: {
+    id: number;
+    number: number;
+    title: string;
+    slug: string;
+  }[];
+}
+
+export interface DiscoverChapterData {
+  pages: string[];
+}
+
+export interface DiscoverConnectorData {
+  connectors: DiscoverConnector[];
+}
+
+export interface DiscoverConnector {
+  name: string;
+  websiteUrl: string;
+  logoUrl: string;
+}
+
 export type RootStackParamList = {
   Home: undefined;
+  Discover: undefined;
+  DiscoverManga: {
+    connector: DiscoverConnector;
+    manga: DiscoverListData;
+  };
+  DiscoverMangaChapter: {
+    connector: DiscoverConnector;
+    manga: DiscoverListData;
+    chapter: number;
+  };
   Download: undefined;
   DownloadGallery: {
     url: string;

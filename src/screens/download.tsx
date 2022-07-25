@@ -14,7 +14,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useGalleries } from '../hooks/use-galleries';
-import { useServerUrl } from '../hooks/use-server-storage';
+import { useServerUrl } from '../hooks/use-server-url';
 import { downloadManga, DownloadProgress, DownloadProgressCallback } from '../lib/download';
 import { Gallery, LocalAPIData, RootStackParamList } from '../lib/interfaces';
 import { ModalDialog, ModalOverlay, PrimaryText } from '../lib/style';

@@ -9,6 +9,7 @@ import { useSyncDirs } from './src/hooks/use-sync-dirs';
 import { NO_HEADER } from './src/lib/constants';
 import { RootStackParamList } from './src/lib/interfaces';
 import { theme } from './src/lib/theme';
+import { DiscoverScreen } from './src/screens/discover';
 import { DownloadScreen } from './src/screens/download';
 import { DownloadGalleryScreen } from './src/screens/download-gallery';
 import { GalleryScreen } from './src/screens/gallery';
@@ -52,6 +53,15 @@ export default function App() {
                     />
                   </Pressable>
                 ),
+                headerLeft: () => (
+                  <Pressable onPress={() => navigation.push('Discover')}>
+                    <MaterialCommunityIcons
+                      name="compass-outline"
+                      size={24}
+                      color={theme.palette.primaryText}
+                    />
+                  </Pressable>
+                ),
               })}
             />
             <Stack.Screen
@@ -72,6 +82,11 @@ export default function App() {
               options={({ route }) => ({ title: `${route.params.gallery.name}` })}
             />
             <Stack.Screen name="Read" component={ChapterReadScreen} options={NO_HEADER} />
+            <Stack.Screen
+              name="Discover"
+              component={DiscoverScreen}
+              options={{ title: 'Discover' }}
+            />
           </Stack.Navigator>
           <StatusBar style="light" />
         </NavigationContainer>
