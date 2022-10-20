@@ -279,8 +279,8 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={{ height: dimensions.height - 60 }}>
       <ListHeader>
-        <Button title={`Order by: ${sortKind}`} onPress={handleSort} />
-        <Button title={`Order direction: ${sortOrder}`} onPress={handleSortOrder} />
+        <Button color="white" title={`Order by: ${sortKind}`} onPress={handleSort} />
+        <Button color="white" title={`Order direction: ${sortOrder}`} onPress={handleSortOrder} />
       </ListHeader>
       <Pressable style={{ marginVertical: 8 }} onPress={handleAdvancedDetails}>
         <Text style={{ color: 'white' }}>Showing {filteredGalleries.length} galleries</Text>

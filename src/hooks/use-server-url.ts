@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { env } from '../lib/config';
 import { LocalAPIResponse } from '../lib/interfaces';
 
 export interface UseServerUrlOptions {
@@ -7,7 +8,7 @@ export interface UseServerUrlOptions {
 }
 
 export const useServerUrl = <APIResponse = LocalAPIResponse>(options?: UseServerUrlOptions) => {
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(env.defaultFileServer ?? '');
   const [loading, setLoading] = useState(false);
   const [local, setLocal] = useState<APIResponse | undefined>();
   const handleSetUrl = async (newUrl: string) => {

@@ -45,7 +45,7 @@ export default function App() {
               options={({ navigation }) => ({
                 title: 'Galleries',
                 headerRight: () => (
-                  <Pressable onPress={() => navigation.push('Download')}>
+                  <Pressable onPress={() => navigation.push('Download')} style={{ marginRight: 4 }}>
                     <MaterialCommunityIcons
                       name="download"
                       size={24}

@@ -23,7 +23,7 @@ export const readChapter = (galleryId: number, chapterIndex: number) => {
 };
 
 export const getGalleryLastReadChapter = (gallery: Gallery) =>
-  gallery.chapters.find((it) => it.read === false) ?? gallery.chapters[0];
+  gallery.chapters.find(it => it.read === false) ?? gallery.chapters[0];
 
 export const getGalleryLastReadChapterNumber = (chapter: Chapter) =>
   parseInt(chapter.name.split('-')[0].replace(/[^0-9]/gi, ''), 10);
@@ -51,15 +51,15 @@ export const getGalleryDetail = (gallery: Gallery) => {
 
 export const upsertGallery = (gallery: GalleryInput) => {
   const galleries = galleryStorage.getCollection();
-  const found = galleries.find((it) => it.name === gallery.name);
+  const found = galleries.find(it => it.name === gallery.name);
   if (found != null) {
-    const foundChapterNames = found.chapters.map((it) => it.name);
+    const foundChapterNames = found.chapters.map(it => it.name);
     const merge: Gallery = {
       ...gallery,
       ...found,
       chapters: [
         ...found.chapters,
-        ...gallery.chapters.filter((it) => !foundChapterNames.includes(it.name)),
+        ...gallery.chapters.filter(it => !foundChapterNames.includes(it.name)),
       ].sort((a: Chapter, b: Chapter) => a.name.localeCompare(b.name, 'en', { numeric: true })),
     };
     return galleryStorage.updateItem(merge);
@@ -75,17 +75,30 @@ export const updateLastReadAt = async (gallery: Gallery) => {
 export const bulkChapterMarkAsRead = (gallery: Gallery, chapters: string[]) => {
   const newChapters = gallery.chapters
     .slice(0)
-    .map((it) => ({ ...it, read: it.read || chapters.includes(it.name) }));
+    .map(it => ({ ...it, read: it.read || chapters.includes(it.name) }));
   const newGallery = { ...gallery, lastReadAt: new Date().toString(), chapters: newChapters };
   return galleryStorage.updateItem(newGallery);
 };
 
 export const bulkChapterDelete = (gallery: Gallery, chapters: string[]) => {
-  const newChapters = gallery.chapters.slice(0).filter((it) => !chapters.includes(it.name));
+  const newChapters = gallery.chapters.slice(0).filter(it => !chapters.includes(it.name));
   const newGallery = { ...gallery, chapters: newChapters };
-  const removeChapters = gallery.chapters.slice(0).filter((it) => chapters.includes(it.name));
+  const removeChapters = gallery.chapters.slice(0).filter(it => chapters.includes(it.name));
   for (const chapter of removeChapters) {
     FileSystem.deleteAsync(`${directoriesPath}/${gallery.path}/${chapter.path}`);
   }
+  return galleryStorage.updateItem(newGallery);
+};
+
+export const updateChapterCurrentPage = (
+  galleryId: number,
+  chapterName: string,
+  currentPage: number,
+) => {
+  const galleries = galleryStorage.getCollectionById();
+  const newGallery = { ...galleries[galleryId] };
+  const foundChapter = newGallery.chapters.find(it => it.name === chapterName);
+  if (foundChapter == null) return;
+  foundChapter.currentPage = currentPage;
   return galleryStorage.updateItem(newGallery);
 };

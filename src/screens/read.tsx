@@ -1,40 +1,40 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as FileSystem from 'expo-file-system';
-import { FC, useEffect, useRef, useState } from 'react';
+import { FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   FlatList,
   Image,
   ListRenderItemInfo,
+  Text,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   useWindowDimensions,
+  View,
 } from 'react-native';
 import { DEFAULT_DIRECTORIES_PATH, NO_HEADER } from '../lib/constants';
-import { readChapter } from '../lib/gallery';
+import { readChapter, updateChapterCurrentPage } from '../lib/gallery';
 import { RootStackParamList } from '../lib/interfaces';
 import { PrimaryText } from '../lib/style';
 import { theme } from '../lib/theme';
 
 type ChapterReadScreenProps = NativeStackScreenProps<RootStackParamList, 'Read'>;
 
-const Page: FC<{ path: string; width: number; onPress: () => void }> = ({
-  path,
-  width,
-  onPress,
-}) => {
-  const [height, setHeight] = useState(0);
-  useEffect(() => {
-    Image.getSize(path, (w, h) => {
-      const newHeight = (width / w) * h;
-      setHeight(newHeight);
-    });
-  }, []);
+const Page: FC<{
+  path: string;
+  width: number;
+  onPress: () => void;
+  index: number;
+}> = ({ path, width, onPress, index }) => {
+  const [height, setHeight] = useState(300);
+  useEffect(() => Image.getSize(path, (w, h) => setHeight((width / w) * h)), []);
   return (
     <TouchableWithoutFeedback onPress={onPress}>
-      <Image source={{ uri: path, width, height }} />
+      <Image source={{ uri: path, width, height }} style={{ marginTop: index === 0 ? 40 : 0 }} />
     </TouchableWithoutFeedback>
   );
 };
+
+const MemoPage = memo(Page);
 
 const directoriesPath = `${FileSystem.documentDirectory}${DEFAULT_DIRECTORIES_PATH}`;
 
@@ -43,62 +43,135 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
   const listRef = useRef<FlatList<string>>();
   const dimensions = useWindowDimensions();
   const [show, setShow] = useState(false);
-  const renderItem = (it: ListRenderItemInfo<string>) => (
-    <Page
-      path={`${directoriesPath}/${gallery.path}/${chapter.path}/${it.item}`}
-      width={dimensions.width}
-      onPress={() => {
-        if (show) {
-          navigation.setOptions(NO_HEADER);
-        } else {
-          navigation.setOptions({
-            headerBackTitleVisible: true,
-            headerBackVisible: true,
-            headerTransparent: false,
-            title: `${route.params.gallery.name} / ${route.params.chapter.name}`,
-            headerBackTitle: 'Back',
-            headerStyle: {
-              backgroundColor: theme.palette.background,
-            },
-            headerTitle: () => (
-              <PrimaryText style={{ fontSize: 18 }} allowFontScaling>
-                {route.params.gallery.name} / {route.params.chapter.name}
-              </PrimaryText>
-            ),
-          });
-        }
-        setShow((prev) => !prev);
-      }}
-    />
+  const [currentPage, setCurrentPage] = useState(0);
+  const galleryIndex = useMemo(
+    () => gallery.chapters.findIndex(it => it.name === chapter?.name) ?? -1,
+    [gallery, chapter],
   );
+  const nextChapter = useMemo(
+    () =>
+      galleryIndex >= 0 && gallery.chapters.length - 1 > galleryIndex
+        ? gallery.chapters[galleryIndex + 1]
+        : undefined,
+    [gallery, chapter, galleryIndex],
+  );
+  const renderItem = (it: ListRenderItemInfo<string>) =>
+    it.item === 'end' ? (
+      <View style={{ paddingVertical: 24 }}>
+        {nextChapter == null ? (
+          <View style={{ paddingVertical: 100, alignItems: 'center' }}>
+            <Text style={{ color: 'white', fontSize: 24 }}>This is the last chapter</Text>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={goToNextChapter} style={{ flex: 1 }}>
+            <View
+              style={{
+                paddingVertical: 100,
+                backgroundColor: '#444',
+                alignItems: 'center',
+                borderRadius: 16,
+              }}
+            >
+              <Text style={{ color: 'white', fontSize: 24 }}>Next Chapter</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
+    ) : (
+      <MemoPage
+        path={`${directoriesPath}/${gallery.path}/${chapter.path}/${it.item}`}
+        width={dimensions.width}
+        index={it.index}
+        onPress={() => {
+          if (show) {
+            navigation.setOptions(NO_HEADER);
+          } else {
+            navigation.setOptions({
+              headerBackTitleVisible: false,
+              headerBackVisible: false,
+              headerTransparent: false,
+              title: `${route.params.gallery.name} / ${route.params.chapter.name}`,
+              headerBackTitle: 'Back',
+              headerStyle: {
+                backgroundColor: theme.palette.background,
+              },
+              headerTitle: () => (
+                <View style={{ height: 44, justifyContent: 'center' }}>
+                  <PrimaryText style={{ fontSize: 18, alignSelf: 'center' }}>
+                    {route.params.gallery.name}
+                  </PrimaryText>
+                  <PrimaryText style={{ fontSize: 18, alignSelf: 'center' }}>
+                    {route.params.chapter.name}
+                  </PrimaryText>
+                </View>
+              ),
+            });
+          }
+          setShow(prev => !prev);
+        }}
+      />
+    );
 
-  const handleEndReached = () => {
-    const index = gallery.chapters.findIndex((it) => it.name === chapter.name);
-    if (index < 0) return;
-    const nextChapter =
-      gallery.chapters.length - 1 > index ? gallery.chapters[index + 1] : undefined;
-    if (nextChapter == null) return;
-    Alert.alert('Next chapter', 'Want to read the next chapter?', [
-      {
-        style: 'default',
-        text: 'Next',
-        onPress: () => {
-          readChapter(gallery.id, index);
-          navigation.replace('Read', { chapter: nextChapter, gallery });
-        },
-      },
-      { style: 'cancel', text: 'Cancel' },
-    ]);
+  const goToNextChapter = useCallback(async () => {
+    if (nextChapter == null || gallery == null) return;
+    await readChapter(gallery.id, galleryIndex);
+    navigation.replace('Read', { chapter: nextChapter, gallery });
+  }, [galleryIndex, nextChapter, gallery, navigation]);
+
+  const handleViewableItems = useCallback(info => {
+    if (info.viewableItems.length > 0) {
+      setCurrentPage(info.viewableItems[0].index ?? 0);
+      updateChapterCurrentPage(gallery.id, chapter.name, info.viewableItems[0].index);
+    }
+  }, []);
+
+  const handleScrollToIndexFail = (info: {
+    index: number;
+    highestMeasuredFrameIndex: number;
+    averageItemLength: number;
+  }) => {
+    const offset = info.averageItemLength * info.index;
+    if (listRef.current != null) {
+      listRef.current.scrollToOffset({ offset, animated: false });
+    }
   };
 
+  useEffect(() => {
+    if (listRef.current != null && chapter.currentPage > 0) {
+      setTimeout(() => {
+        if (listRef.current != null) {
+          listRef.current.scrollToIndex({ index: chapter.currentPage, animated: false });
+        }
+      }, 100);
+    }
+  }, [listRef, chapter]);
+
   return (
-    <FlatList
-      data={chapter.pages}
-      renderItem={renderItem}
-      onEndReached={handleEndReached}
-      onEndReachedThreshold={0}
-      keyExtractor={(it) => it}
-      ref={listRef as any}
-    />
+    <>
+      <FlatList
+        data={[...chapter.pages, 'end']}
+        renderItem={renderItem}
+        onViewableItemsChanged={handleViewableItems}
+        keyExtractor={it => it}
+        ref={listRef as any}
+        onScrollToIndexFailed={handleScrollToIndexFail}
+        initialNumToRender={chapter.pages.length}
+      />
+      <View
+        style={{
+          backgroundColor: 'black',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          padding: 8,
+          borderTopRightRadius: 16,
+          paddingLeft: 16,
+        }}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>
+          {currentPage + 1}/{chapter.pages.length ?? 0}
+        </Text>
+      </View>
+    </>
   );
 };

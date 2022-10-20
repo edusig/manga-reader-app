@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export default () => ({
   expo: {
     name: 'manga-reader-app',
@@ -36,6 +38,7 @@ export default () => ({
       },
       advancedPassword: process.env.ADVANCED_PASSWORD,
       adultTags: (process.env.ADULT_TAGS ?? '').split(','),
+      defaultFileServer: process.env.DEFAULT_FILE_SERVER,
     },
     runtimeVersion: {
       policy: 'sdkVersion',
