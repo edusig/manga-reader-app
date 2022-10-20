@@ -3,19 +3,24 @@ import { useActionSheet } from '@expo/react-native-action-sheet';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import format from 'date-fns/format';
 import isBefore from 'date-fns/isBefore';
-import { FC, useMemo, useState } from 'react';
+import * as FileSystem from 'expo-file-system';
+import { FC, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Button,
   FlatList,
   Image,
   ListRenderItemInfo,
+  Modal,
   Pressable,
   SafeAreaView,
+  Text,
   useWindowDimensions,
 } from 'react-native';
 import { useGalleries } from '../hooks/use-galleries';
 import { checkGallery } from '../lib/anilist';
+import { env } from '../lib/config';
+import { DEFAULT_DIRECTORIES_PATH } from '../lib/constants';
 import {
   getGalleryDetail,
   getGalleryLastReadChapter,
@@ -24,15 +29,15 @@ import {
 } from '../lib/gallery';
 import { Gallery, RootStackParamList } from '../lib/interfaces';
 import { galleryStorage } from '../lib/storage';
-import { EmptyText, PrimaryText, SecondaryText } from '../lib/style';
+import { EmptyText, ModalDialog, ModalOverlay, PrimaryText, SecondaryText } from '../lib/style';
 
 type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Gallery'>;
 
 const GalleryItemContainer = styled.View`
-  border-bottom-color: ${(props) => props.theme.palette.border};
+  border-bottom-color: ${props => props.theme.palette.border};
   border-bottom-width: 1px;
   flex-direction: row;
-  background-color: ${(props) => props.theme.palette.surface};
+  background-color: ${props => props.theme.palette.surface};
 `;
 
 const GalleryTitle = styled(PrimaryText)`
@@ -56,7 +61,7 @@ const GalleryItemNumber = styled(SecondaryText)`
   font-size: 24px;
 `;
 
-const GalleryImage = styled(Image)`
+const GalleryImage = styled(Image as any)`
   width: 80px;
   height: 120px;
 `;
@@ -98,6 +103,8 @@ const sortKinds: Record<SortKind, { sort: (a: Gallery, b: Gallery) => number }> 
   },
 };
 
+const directoriesPath = `${FileSystem.documentDirectory}${DEFAULT_DIRECTORIES_PATH}`;
+
 const GalleryItem: FC<{
   gallery: Gallery;
   onPress: () => void;
@@ -129,16 +136,43 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
   const { showActionSheetWithOptions } = useActionSheet();
   const [sortKind, setSortKind] = useState<SortKind>(SortKind.NAME);
   const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.ASC);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showAdult, setShowAdult] = useState(false);
+
+  const timeoutRef = useRef();
+  const [presses, setPresses] = useState(0);
+
   const sortedGalleries = useMemo(() => {
     const sorted = galleries.slice(0).sort(sortKinds[sortKind].sort);
     return sortOrder === SortOrder.DESC ? sorted.reverse() : sorted;
   }, [galleries, sortKind, sortOrder]);
 
-  const handleDeleteGallery = (id: number) => () => {
-    galleryStorage.removeItem(id);
+  const filteredGalleries = useMemo(
+    () =>
+      showAdult || env.adultTags == null || env.adultTags.length <= 0
+        ? sortedGalleries
+        : sortedGalleries.filter(
+            it =>
+              it.manga?.genres == null ||
+              !env.adultTags.some(tag => it.manga?.genres.includes(tag)),
+          ),
+    [sortedGalleries, showAdult],
+  );
+
+  const handleDeleteGallery = (id: number) => async () => {
+    setIsLoading(true);
+    try {
+      const galleriesById = galleryStorage.getCollectionById();
+      const path = `${directoriesPath}/${galleriesById[id].path}`;
+      await galleryStorage.removeItem(id);
+      await FileSystem.deleteAsync(path);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsLoading(false);
   };
   const handleReadLatest = (gallery: Gallery) => () => {
-    const latest = gallery.chapters.find((it) => it.read === false) ?? gallery.chapters[0];
+    const latest = gallery.chapters.find(it => it.read === false) ?? gallery.chapters[0];
     updateLastReadAt(gallery);
     navigation.push('Read', { gallery, chapter: latest });
   };
@@ -159,7 +193,7 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
         title: `${gallery.name} Info`,
         message: getGalleryDetail(gallery),
       },
-      (index) => {
+      index => {
         if (index === 0) {
           Alert.alert(
             'Confirm deletion',
@@ -185,7 +219,7 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
         userInterfaceStyle: 'dark',
         title: 'Choose the sorting key',
       },
-      (index) => {
+      index => {
         if (index != null && index < 3) {
           setSortKind(Object.keys(sortKinds)[index] as SortKind);
           setSortOrder(SortOrder.ASC);
@@ -201,7 +235,7 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
         userInterfaceStyle: 'dark',
         title: 'Choose the sorting order',
       },
-      (index) => {
+      index => {
         if (index === 0) setSortOrder(SortOrder.ASC);
         if (index === 1) setSortOrder(SortOrder.DESC);
       },
@@ -214,19 +248,57 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
       onLongPress={handleGalleryLongPress(it.item)}
     />
   );
+  const handleAdvancedDetails = () => {
+    if (timeoutRef.current != null) clearTimeout(timeoutRef.current);
+    if (presses === 10) {
+      Alert.prompt('Password', 'Input the password to show advanced info', (text: string) => {
+        if (text === env.advancedPassword) {
+          showActionSheetWithOptions(
+            {
+              options: [`${showAdult ? 'Hide' : 'Show'} adult galleries`, 'Cancel'],
+              cancelButtonIndex: 1,
+              userInterfaceStyle: 'dark',
+              title: 'Advanced Controls',
+            },
+            selectedIdx => {
+              if (selectedIdx === 0) setShowAdult(prev => !prev);
+            },
+          );
+        } else {
+          Alert.alert('Wrong', 'Ops, nothing to see here XP.');
+        }
+      });
+      setPresses(0);
+    } else {
+      setPresses(prev => prev + 1);
+      setTimeout(() => {
+        setPresses(0);
+      }, 5000);
+    }
+  };
   return (
     <SafeAreaView style={{ height: dimensions.height - 60 }}>
       <ListHeader>
         <Button title={`Order by: ${sortKind}`} onPress={handleSort} />
         <Button title={`Order direction: ${sortOrder}`} onPress={handleSortOrder} />
       </ListHeader>
+      <Pressable style={{ marginVertical: 8 }} onPress={handleAdvancedDetails}>
+        <Text style={{ color: 'white' }}>Showing {filteredGalleries.length} galleries</Text>
+      </Pressable>
       <FlatList
-        data={sortedGalleries}
+        data={filteredGalleries}
         renderItem={renderItem}
-        keyExtractor={(it) => it.id.toString()}
+        keyExtractor={it => it.id.toString()}
         ListEmptyComponent={<EmptyText>No galleries found.</EmptyText>}
         contentContainerStyle={{ paddingBottom: 40 }}
       />
+      <Modal animationType="fade" transparent={true} visible={isLoading}>
+        <ModalOverlay>
+          <ModalDialog>
+            <Text style={{ color: 'white', fontSize: 24 }}>Removing gallery...</Text>
+          </ModalDialog>
+        </ModalOverlay>
+      </Modal>
     </SafeAreaView>
   );
 };

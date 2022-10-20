@@ -50,6 +50,7 @@ const downloadPages = async (
         continue;
       }
     } catch (e) {
+      console.error(e);
       retriesLeft--;
       continue;
     }

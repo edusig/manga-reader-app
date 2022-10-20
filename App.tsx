@@ -53,15 +53,15 @@ export default function App() {
                     />
                   </Pressable>
                 ),
-                headerLeft: () => (
-                  <Pressable onPress={() => navigation.push('Discover')}>
-                    <MaterialCommunityIcons
-                      name="compass-outline"
-                      size={24}
-                      color={theme.palette.primaryText}
-                    />
-                  </Pressable>
-                ),
+                // headerLeft: () => (
+                //   <Pressable onPress={() => navigation.push('Discover')}>
+                //     <MaterialCommunityIcons
+                //       name="compass-outline"
+                //       size={24}
+                //       color={theme.palette.primaryText}
+                //     />
+                //   </Pressable>
+                // ),
               })}
             />
             <Stack.Screen

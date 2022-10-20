@@ -16,6 +16,8 @@ const extToMimeDict = {
   webp: 'image/webp',
 };
 
+const imageExts = Object.keys(extToMimeDict);
+
 const jsonReplacer = (_, v) => {
   if (v instanceof Map) {
     return Array.from(v.values()).sort((a, b) => {
@@ -34,7 +36,7 @@ const dirWalk = async (currentDir, depth = 2) => {
   const root = path.join(rootDir, currentDir);
   const dirs = await new fdir()
     .crawlWithOptions(root, {
-      filters: [(path) => !path.includes('.DS_Store')],
+      filters: [(path) => !path.includes('.DS_Store') && imageExts.some(it => path.includes(it))],
       maxDepth: depth,
       relativePaths: true,
     })
@@ -90,6 +92,7 @@ const download = async (req, res) => {
     const stream = fs.createReadStream(subpath);
     stream.pipe(res);
   } catch (e) {
+    console.log('FAILED TO DOWNLOD', subpath)
     console.error(e);
     res.writeHead(404);
     return res.end();

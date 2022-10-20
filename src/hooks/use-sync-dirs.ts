@@ -15,6 +15,17 @@ const syncDirs = async () => {
   if (!(await FileSystem.getInfoAsync(directoriesPath)).exists) {
     await FileSystem.makeDirectoryAsync(directoriesPath);
   }
+  // const info = await FileSystem.getInfoAsync(directoriesPath);
+  // console.log('DIRECTORIES INFO', info);
+  // const freeDisk = await FileSystem.getFreeDiskStorageAsync()
+  // console.log('FREE DISK', freeDisk);
+  // const readDir = await FileSystem.readDirectoryAsync(directoriesPath);
+  // console.log('READ DIR', readDir);
+  // try {
+  //   await FileSystem.deleteAsync(`${directoriesPath}/martial-arts-reigns`);
+  // } catch(e) {
+  //   console.error(e);
+  // }
   // await resetStorage();
   console.log('FINISH SYNC DIRS');
 };
