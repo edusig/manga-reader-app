@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useGalleries } from '../hooks/use-galleries';
 import { useServerUrl } from '../hooks/use-server-url';
-import { downloadManga, DownloadProgress, DownloadProgressCallback } from '../lib/download';
+import { DownloadProgress, DownloadProgressCallback, downloadManga } from '../lib/download';
 import { Gallery, LocalAPIData, RootStackParamList } from '../lib/interfaces';
 import { ModalDialog, ModalOverlay, PrimaryText } from '../lib/style';
 import { theme } from '../lib/theme';
@@ -23,8 +23,8 @@ import { theme } from '../lib/theme';
 const TextInputStyled = styled(TextInput)`
   border-radius: 8px;
   padding: 8px 12px;
-  background-color: ${(props) => props.theme.palette.surface};
-  color: ${(props) => props.theme.palette.primaryText};
+  background-color: ${props => props.theme.palette.surface};
+  color: ${props => props.theme.palette.primaryText};
   height: 40px;
   flex: 1;
   margin-top: 4px;
@@ -52,7 +52,7 @@ const Title = styled(PrimaryText)`
 
 const GalleryItem = styled(Pressable)`
   border-bottom-width: 1px;
-  border-bottom-color: ${(props) => props.theme.palette.border};
+  border-bottom-color: ${props => props.theme.palette.border};
   padding: 12px 8px;
   flex-direction: row;
   justify-content: space-between;
@@ -66,20 +66,26 @@ const GalleryItemTitle = styled(PrimaryText)`
 const ProgressBarContainer = styled.View`
   background-color: #555;
   width: 300px;
-  height: 30px;
+  height: 16px;
   border-radius: 8px;
 `;
 
 const ProgressBar = styled.View<DownloadProgress>`
-  background-color: ${(props) => props.theme.palette.success};
-  height: 30px;
-  width: ${(props) => ((props.cur / props.total) * 100).toString()}%;
+  background-color: ${props => props.theme.palette.success};
+  height: 16px;
+  width: ${props => ((props.cur / props.total) * 100).toString()}%;
   border-radius: 8px;
 `;
 
 const ProgressTitle = styled(PrimaryText)`
   font-size: 20px;
   margin-bottom: 8px;
+`;
+
+const ProgressFiles = styled.View`
+  margin-top: 16px;
+  padding: 0 8px;
+  align-self: stretch;
 `;
 
 type DownloadScreenProps = NativeStackScreenProps<RootStackParamList, 'Download'>;
@@ -92,8 +98,8 @@ const LocalGallery: FC<{
   gallery?: Gallery;
 }> = ({ data, gallery, onSelect, onAdd }) => {
   const allDownloaded = useMemo(() => {
-    const chapterNames = gallery?.chapters.map((it) => it.name);
-    return data.files.every((it) => chapterNames?.includes(it.name));
+    const chapterNames = gallery?.chapters.map(it => it.name);
+    return data.files.every(it => chapterNames?.includes(it.name));
   }, [gallery, data]);
   return (
     <GalleryItem onPress={() => onSelect(data)}>
@@ -122,14 +128,17 @@ export const DownloadScreen: FC<DownloadScreenProps> = ({ navigation }) => {
   const renderItem = (it: ListRenderItemInfo<LocalAPIData>) => (
     <LocalGallery
       data={it.item}
-      gallery={galleries.find((gallery) => gallery.name === it.item.name)}
+      gallery={galleries.find(gallery => gallery.name === it.item.name)}
       index={it.index}
       onSelect={handleOpen}
       onAdd={handleConfirmAdd}
     />
   );
 
-  const handleDownloadProgress: DownloadProgressCallback = (progress) => {
+  const handleDownloadProgress: DownloadProgressCallback = progress => {
+    if (progress.error != null) {
+      Alert.alert('Error while trying to download gallery', progress.error);
+    }
     if (progress.cur < progress.total) {
       setDownloadProgress(progress);
     } else {
@@ -138,7 +147,7 @@ export const DownloadScreen: FC<DownloadScreenProps> = ({ navigation }) => {
   };
 
   const handleOpen = async (data: LocalAPIData) => {
-    const gallery = galleries.find((it) => it.name === data.name);
+    const gallery = galleries.find(it => it.name === data.name);
     navigation.navigate('DownloadGallery', { apiData: data, gallery: gallery, url });
   };
 
@@ -157,7 +166,7 @@ export const DownloadScreen: FC<DownloadScreenProps> = ({ navigation }) => {
   };
 
   const handleAddLocal = async (data: LocalAPIData) => {
-    if (galleries.find((it) => it.name === data.name) != null) {
+    if (galleries.find(it => it.name === data.name) != null) {
       Alert.alert('Gallery already added! Select individual chapters to continue.');
       return;
     }
@@ -223,6 +232,12 @@ export const DownloadScreen: FC<DownloadScreenProps> = ({ navigation }) => {
                     <ProgressBar {...downloadProgress} />
                   </ProgressBarContainer>
                 )}
+                <ProgressFiles>
+                  <PrimaryText>Download Files:</PrimaryText>
+                  {downloadProgress.curBatch.map(it => (
+                    <PrimaryText>- {decodeURIComponent(it.url).replace(url, '')}</PrimaryText>
+                  ))}
+                </ProgressFiles>
               </>
             ) : (
               <Title>Adding gallery...</Title>

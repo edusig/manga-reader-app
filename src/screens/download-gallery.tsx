@@ -12,7 +12,7 @@ import {
   SafeAreaView,
   useWindowDimensions,
 } from 'react-native';
-import { downloadManga, DownloadProgress, DownloadProgressCallback } from '../lib/download';
+import { DownloadProgress, DownloadProgressCallback, downloadManga } from '../lib/download';
 import { LocalAPIDataFiles, RootStackParamList } from '../lib/interfaces';
 import { ModalDialog, ModalOverlay, PrimaryText } from '../lib/style';
 import { theme } from '../lib/theme';
@@ -28,7 +28,7 @@ const Title = styled(PrimaryText)`
 
 const GalleryItem = styled(Pressable)`
   border-bottom-width: 1px;
-  border-bottom-color: ${(props) => props.theme.palette.border};
+  border-bottom-color: ${props => props.theme.palette.border};
   padding: 8px;
   flex-direction: row;
   justify-content: space-between;
@@ -49,6 +49,31 @@ const ActionContainer = styled(Container)`
 const AllDownloadedText = styled(PrimaryText)`
   font-size: 24px;
   margin: 12px 0;
+`;
+
+const ProgressBarContainer = styled.View`
+  background-color: #555;
+  width: 300px;
+  height: 16px;
+  border-radius: 8px;
+`;
+
+const ProgressBar = styled.View<DownloadProgress>`
+  background-color: ${props => props.theme.palette.success};
+  height: 16px;
+  width: ${props => ((props.cur / props.total) * 100).toString()}%;
+  border-radius: 8px;
+`;
+
+const ProgressTitle = styled(PrimaryText)`
+  font-size: 20px;
+  margin-bottom: 8px;
+`;
+
+const ProgressFiles = styled.View`
+  margin-top: 16px;
+  padding: 0 8px;
+  align-self: stretch;
 `;
 
 type DownloadGalleryScreenProps = NativeStackScreenProps<RootStackParamList, 'DownloadGallery'>;
@@ -85,18 +110,21 @@ export const DownloadGalleryScreen: FC<DownloadGalleryScreenProps> = ({ navigati
   const [isDownloading, setIsDownloading] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>();
-  const chapterNames = useMemo(() => gallery?.chapters.map((it) => it.name), [gallery?.chapters]);
+  const chapterNames = useMemo(() => gallery?.chapters.map(it => it.name), [gallery?.chapters]);
 
   const renderItem = (it: ListRenderItemInfo<LocalAPIDataFiles>) => (
     <LocalGalleryChapter
       data={it.item}
       selected={selected.includes(it.item.name)}
-      downloaded={gallery?.chapters.map((it) => it.name).includes(it.item.name)}
+      downloaded={gallery?.chapters.map(it => it.name).includes(it.item.name)}
       onSelect={handleToggleSelect}
     />
   );
 
-  const handleDownloadProgress: DownloadProgressCallback = (progress) => {
+  const handleDownloadProgress: DownloadProgressCallback = progress => {
+    if (progress.error != null) {
+      Alert.alert('Error while trying to download gallery', progress.error);
+    }
     if (progress.cur < progress.total) {
       setDownloadProgress(progress);
     } else {
@@ -124,17 +152,17 @@ export const DownloadGalleryScreen: FC<DownloadGalleryScreenProps> = ({ navigati
   };
 
   const handleToggleSelect = (data: LocalAPIDataFiles) => {
-    setSelected((prev) =>
-      selected.includes(data.name) ? prev.filter((it) => it !== data.name) : [...prev, data.name],
+    setSelected(prev =>
+      selected.includes(data.name) ? prev.filter(it => it !== data.name) : [...prev, data.name],
     );
   };
 
   const handleToggleSelectAll = () => {
-    const chapterNames = gallery?.chapters.map((it) => it.name);
+    const chapterNames = gallery?.chapters.map(it => it.name);
     setSelected(
       selected.length === apiData.files.length
         ? []
-        : apiData.files.map((it) => it.name).filter((it) => !chapterNames?.includes(it)),
+        : apiData.files.map(it => it.name).filter(it => !chapterNames?.includes(it)),
     );
   };
   return (
@@ -165,11 +193,30 @@ export const DownloadGalleryScreen: FC<DownloadGalleryScreenProps> = ({ navigati
       <Modal animationType="fade" transparent={true} visible={isDownloading}>
         <ModalOverlay>
           <ModalDialog>
-            <Title>
-              {downloadProgress != null
-                ? `Downloading: ${downloadProgress.cur} of ${downloadProgress.total} pages`
-                : 'Adding gallery...'}
-            </Title>
+            {downloadProgress != null ? (
+              <>
+                <Title>Downloading</Title>
+                <ProgressTitle>
+                  {`${downloadProgress.cur} of ${downloadProgress.total} pages (${(
+                    (downloadProgress.cur / downloadProgress.total) *
+                    100
+                  ).toFixed(2)}%)`}
+                </ProgressTitle>
+                {downloadProgress != null && (
+                  <ProgressBarContainer>
+                    <ProgressBar {...downloadProgress} />
+                  </ProgressBarContainer>
+                )}
+                <ProgressFiles>
+                  <PrimaryText>Download Files:</PrimaryText>
+                  {downloadProgress.curBatch.map(it => (
+                    <PrimaryText>- {decodeURIComponent(it.url).replace(url, '')}</PrimaryText>
+                  ))}
+                </ProgressFiles>
+              </>
+            ) : (
+              <Title>Adding gallery...</Title>
+            )}
           </ModalDialog>
         </ModalOverlay>
       </Modal>

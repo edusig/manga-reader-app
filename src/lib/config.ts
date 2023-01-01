@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 
 export interface Environment {
   advancedPassword: string;
-  adultTags: string[];
+  filterTags: string[];
   defaultFileServer?: string;
 }
 

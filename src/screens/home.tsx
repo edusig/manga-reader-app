@@ -137,7 +137,7 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
   const [sortKind, setSortKind] = useState<SortKind>(SortKind.NAME);
   const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.ASC);
   const [isLoading, setIsLoading] = useState(false);
-  const [showAdult, setShowAdult] = useState(false);
+  const [showFilteredTags, setShowFilteredTags] = useState(false);
 
   const timeoutRef = useRef();
   const [presses, setPresses] = useState(0);
@@ -149,14 +149,16 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
 
   const filteredGalleries = useMemo(
     () =>
-      showAdult || env.adultTags == null || env.adultTags.length <= 0
+      showFilteredTags || env.filterTags == null || env.filterTags.length <= 0
         ? sortedGalleries
         : sortedGalleries.filter(
             it =>
               it.manga?.genres == null ||
-              !env.adultTags.some(tag => it.manga?.genres.includes(tag)),
+              !env.filterTags.some(tag =>
+                it.manga?.genres.map(g => g.toLocaleLowerCase()).includes(tag.toLocaleLowerCase()),
+              ),
           ),
-    [sortedGalleries, showAdult],
+    [sortedGalleries, showFilteredTags],
   );
 
   const handleDeleteGallery = (id: number) => async () => {
@@ -255,13 +257,13 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
         if (text === env.advancedPassword) {
           showActionSheetWithOptions(
             {
-              options: [`${showAdult ? 'Hide' : 'Show'} adult galleries`, 'Cancel'],
+              options: [`${showFilteredTags ? 'Hide' : 'Show'} filtered galleries`, 'Cancel'],
               cancelButtonIndex: 1,
               userInterfaceStyle: 'dark',
               title: 'Advanced Controls',
             },
             selectedIdx => {
-              if (selectedIdx === 0) setShowAdult(prev => !prev);
+              if (selectedIdx === 0) setShowFilteredTags(prev => !prev);
             },
           );
         } else {

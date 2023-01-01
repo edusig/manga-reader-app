@@ -8,9 +8,16 @@ const directoriesPath = `${FileSystem.documentDirectory}${DEFAULT_DIRECTORIES_PA
 
 export type DownloadProgressCallback = (progress: DownloadProgress) => void;
 
+export interface DownloadItem {
+  url: string;
+  file: string;
+}
+
 export interface DownloadProgress {
   cur: number;
   total: number;
+  error?: string;
+  curBatch: DownloadItem[];
 }
 
 const setupGalleryDirs = async (galleryDir: string, chapters: Gallery['chapters']) => {
@@ -28,7 +35,7 @@ const setupGalleryDirs = async (galleryDir: string, chapters: Gallery['chapters'
 };
 
 const downloadPages = async (
-  downloads: { url: string; file: string }[],
+  downloads: DownloadItem[],
   progressCallback?: DownloadProgressCallback,
 ) => {
   let batchSize = 3;
@@ -39,25 +46,33 @@ const downloadPages = async (
     if (retriesLeft === 0) {
       return false;
     }
+    const curBatch = downloads.slice(batchSize * cur, batchSize * (cur + 1));
     try {
-      const res = await Promise.all(
-        downloads
-          .slice(batchSize * cur, batchSize * (cur + 1))
-          .map((it) => FileSystem.downloadAsync(it.url, it.file)),
-      );
-      if (res.some((it) => it.status !== 200)) {
+      progressCallback?.({
+        cur: cur * batchSize,
+        total: downloads.length,
+        curBatch,
+      });
+      const res = await Promise.all(curBatch.map(it => FileSystem.downloadAsync(it.url, it.file)));
+      if (res.some(it => it.status !== 200)) {
         retriesLeft--;
         continue;
       }
     } catch (e) {
       console.error(e);
+      if (e instanceof Error) {
+        progressCallback?.({
+          cur: cur * batchSize,
+          total: downloads.length,
+          error: e.message,
+          curBatch,
+        });
+      }
       retriesLeft--;
       continue;
     }
     cur++;
     retriesLeft = 3;
-    if (progressCallback != null)
-      progressCallback({ cur: cur * batchSize, total: downloads.length });
   }
   return true;
 };
@@ -73,14 +88,14 @@ export const downloadManga = async (
   const filesCount = data.files.reduce((sum, it) => sum + it.files.length, 0);
   const chapters =
     options?.filterChapters != null
-      ? data.files.filter((it) => options?.filterChapters?.includes(it.name))
+      ? data.files.filter(it => options?.filterChapters?.includes(it.name))
       : data.files;
   const gallery: GalleryInput = {
     dirsCount: chapters.length,
     filesCount,
     name: data.name,
     path: slugify(data.fullPath),
-    chapters: chapters.map((it) => ({
+    chapters: chapters.map(it => ({
       name: it.name,
       path: slugify(it.name),
       pages: it.files,
@@ -92,8 +107,8 @@ export const downloadManga = async (
   const galleryDir = `${directoriesPath}/${gallery.path}`;
   try {
     await setupGalleryDirs(galleryDir, gallery.chapters);
-    const downloads = gallery.chapters.flatMap((chapter) =>
-      chapter.pages.map((page) => ({
+    const downloads = gallery.chapters.flatMap(chapter =>
+      chapter.pages.map(page => ({
         url: `${url}/${encodeURIComponent(`${gallery.name}/${chapter.name}/${page}`)}`,
         file: `${galleryDir}/${chapter.path}/${page}`,
       })),

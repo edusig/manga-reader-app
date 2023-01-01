@@ -37,7 +37,7 @@ export default () => ({
         projectId: 'f29aae26-2042-4481-aa3b-fb197483345d',
       },
       advancedPassword: process.env.ADVANCED_PASSWORD,
-      adultTags: (process.env.ADULT_TAGS ?? '').split(','),
+      filterTags: (process.env.FILTER_TAGS ?? '').split(','),
       defaultFileServer: process.env.DEFAULT_FILE_SERVER,
     },
     runtimeVersion: {

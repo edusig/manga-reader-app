@@ -36,7 +36,7 @@ const dirWalk = async (currentDir, depth = 2) => {
   const root = path.join(rootDir, currentDir);
   const dirs = await new fdir()
     .crawlWithOptions(root, {
-      filters: [(path) => !path.includes('.DS_Store') && imageExts.some(it => path.includes(it))],
+      filters: [path => !path.includes('.DS_Store') && imageExts.some(it => path.includes(it))],
       maxDepth: depth,
       relativePaths: true,
     })
@@ -67,7 +67,7 @@ const dirWalk = async (currentDir, depth = 2) => {
  *
  * @param {http.ServerResponse} res
  */
-const listDirs = async (res) => {
+const listDirs = async res => {
   const dirs = await dirWalk('.');
   res.writeHead(200);
   res.end(JSON.stringify({ count: dirs.length, data: dirs }, jsonReplacer));
@@ -80,8 +80,8 @@ const listDirs = async (res) => {
  */
 const download = async (req, res) => {
   if (req.url.startsWith('/favicon.ico')) return res.end();
-  const subpath = path.join(rootDir, decodeURIComponent(req.url));
   try {
+    const subpath = path.join(rootDir, decodeURIComponent(req.url));
     const stat = await fs.promises.lstat(subpath);
     const ext = path.extname(subpath).replace('.', '');
     const mime = extToMimeDict[ext];
@@ -92,7 +92,7 @@ const download = async (req, res) => {
     const stream = fs.createReadStream(subpath);
     stream.pipe(res);
   } catch (e) {
-    console.log('FAILED TO DOWNLOD', subpath)
+    console.log('FAILED TO DOWNLOD', subpath);
     console.error(e);
     res.writeHead(404);
     return res.end();
@@ -104,12 +104,12 @@ const download = async (req, res) => {
  * @param {http.IncomingMessage} req
  * @param {http.ServerResponse} res
  */
-const requestListener = async (req, res) => {
+const requestListener = (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   if (parsedUrl.pathname.startsWith('/api')) {
-    return await listDirs(res);
+    return listDirs(res);
   }
-  return await download(req, res);
+  return download(req, res);
 };
 
 const server = http.createServer(requestListener);
@@ -119,6 +119,6 @@ console.log('serving files from', rootDir);
 
 const localIp = Object.values(os.networkInterfaces())
   .flat()
-  .find((it) => it.family === 'IPv4' && it.address.startsWith('192.168')).address;
+  .find(it => it.family === 'IPv4' && it.address.startsWith('192.168')).address;
 const serverUrl = `http://${localIp}:9090`;
 console.log(`Server url:\n${serverUrl}`);
