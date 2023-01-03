@@ -258,7 +258,9 @@ export const DownloadScreen: FC<DownloadScreenProps> = ({ navigation }) => {
                 <ProgressFiles>
                   <PrimaryText>Download Files:</PrimaryText>
                   {downloadProgress.curBatch.map(it => (
-                    <PrimaryText>- {decodeURIComponent(it.url).replace(url, '')}</PrimaryText>
+                    <PrimaryText key={it.url}>
+                      - {decodeURIComponent(it.url).replace(url, '')}
+                    </PrimaryText>
                   ))}
                 </ProgressFiles>
               </>

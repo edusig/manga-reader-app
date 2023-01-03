@@ -8,8 +8,8 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { DEFAULT_DIRECTORIES_PATH, NO_HEADER } from '../lib/constants';
 import { readChapter, updateChapterCurrentPage } from '../lib/gallery';
@@ -26,7 +26,7 @@ const Page: FC<{
   index: number;
 }> = ({ path, width, onPress, index }) => {
   const [height, setHeight] = useState(300);
-  useEffect(() => Image.getSize(path, (w, h) => setHeight((width / w) * h)), []);
+  useEffect(() => Image.getSize(path, (w, h) => setHeight((width / w) * h)), [width]);
   return (
     <TouchableWithoutFeedback onPress={onPress}>
       <Image source={{ uri: path, width, height }} style={{ marginTop: index === 0 ? 40 : 0 }} />

@@ -50,7 +50,7 @@ const dirWalk = async (currentDir, depth = 2) => {
       const resolved = parts.slice(0, idx + 1).join(path.sep);
       if (!current.has(resolved)) {
         current.set(resolved, {
-          name: it.replace("'", ''),
+          name: it,
           files: idx >= parts.length - 1 ? [] : new Map(),
           fullPath: resolved,
         });
