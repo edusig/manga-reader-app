@@ -5,12 +5,15 @@ import {
   FlatList,
   Image,
   ListRenderItemInfo,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DEFAULT_DIRECTORIES_PATH, NO_HEADER } from '../lib/constants';
 import { readChapter, updateChapterCurrentPage } from '../lib/gallery';
 import { RootStackParamList } from '../lib/interfaces';
@@ -43,17 +46,20 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
   const listRef = useRef<FlatList<string>>();
   const dimensions = useWindowDimensions();
   const [show, setShow] = useState(false);
+  const insets = useSafeAreaInsets();
   const [currentPage, setCurrentPage] = useState(0);
-  const galleryIndex = useMemo(
+  const [currentScroll, setCurrentScroll] = useState(0);
+  const [currentSize, setCurrentSize] = useState(0);
+  const chapterIndex = useMemo(
     () => gallery.chapters.findIndex(it => it.name === chapter?.name) ?? -1,
     [gallery, chapter],
   );
   const nextChapter = useMemo(
     () =>
-      galleryIndex >= 0 && gallery.chapters.length - 1 > galleryIndex
-        ? gallery.chapters[galleryIndex + 1]
+      chapterIndex >= 0 && gallery.chapters.length - 1 > chapterIndex
+        ? gallery.chapters[chapterIndex + 1]
         : undefined,
-    [gallery, chapter, galleryIndex],
+    [gallery, chapter, chapterIndex],
   );
   const renderItem = (it: ListRenderItemInfo<string>) =>
     it.item === 'end' ? (
@@ -86,22 +92,30 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
           if (show) {
             navigation.setOptions(NO_HEADER);
           } else {
+            const progress = (chapterIndex / (gallery.chapters.length - 1)) * 100;
             navigation.setOptions({
               headerBackTitleVisible: false,
               headerBackVisible: false,
               headerTransparent: false,
-              title: `${route.params.gallery.name} / ${route.params.chapter.name}`,
               headerBackTitle: 'Back',
               headerStyle: {
                 backgroundColor: theme.palette.background,
               },
-              headerTitle: () => (
-                <View style={{ height: 44, justifyContent: 'center' }}>
+              header: () => (
+                <View
+                  style={{
+                    justifyContent: 'center',
+                    height: 96,
+                    paddingTop: insets.top,
+                    backgroundColor: theme.palette.background,
+                  }}
+                >
                   <PrimaryText style={{ fontSize: 18, alignSelf: 'center' }}>
                     {route.params.gallery.name}
                   </PrimaryText>
                   <PrimaryText style={{ fontSize: 18, alignSelf: 'center' }}>
-                    {route.params.chapter.name}
+                    {route.params.chapter.name} ({chapterIndex + 1}/{gallery.chapters.length} -{' '}
+                    {progress.toFixed(1)}%)
                   </PrimaryText>
                 </View>
               ),
@@ -114,9 +128,9 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
 
   const goToNextChapter = useCallback(async () => {
     if (nextChapter == null || gallery == null) return;
-    await readChapter(gallery.id, galleryIndex);
+    await readChapter(gallery.id, chapterIndex);
     navigation.replace('Read', { chapter: nextChapter, gallery });
-  }, [galleryIndex, nextChapter, gallery, navigation]);
+  }, [chapterIndex, nextChapter, gallery, navigation]);
 
   const handleViewableItems = useCallback(info => {
     if (info.viewableItems.length > 0) {
@@ -134,6 +148,14 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
     if (listRef.current != null) {
       listRef.current.scrollToOffset({ offset, animated: false });
     }
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setCurrentScroll(event.nativeEvent.contentOffset.y);
+  };
+
+  const handleContentSizeChange = (_: number, contentHeight: number) => {
+    setCurrentSize(contentHeight);
   };
 
   useEffect(() => {
@@ -156,6 +178,8 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
         ref={listRef as any}
         onScrollToIndexFailed={handleScrollToIndexFail}
         initialNumToRender={chapter.pages.length}
+        onScroll={handleScroll}
+        onContentSizeChange={handleContentSizeChange}
       />
       <View
         style={{
@@ -166,10 +190,14 @@ export const ChapterReadScreen: FC<ChapterReadScreenProps> = ({ route, navigatio
           padding: 8,
           borderTopRightRadius: 16,
           paddingLeft: 16,
+          flexDirection: 'row',
         }}
       >
-        <Text style={{ color: 'white', fontWeight: 'bold' }}>
+        <Text style={{ color: 'white', fontWeight: 'bold', marginRight: 8 }}>
           {currentPage + 1}/{chapter.pages.length ?? 0}
+        </Text>
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>
+          {((currentScroll / currentSize) * 100).toFixed(0)}%
         </Text>
       </View>
     </>

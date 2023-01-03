@@ -25,6 +25,9 @@ export const readChapter = (galleryId: number, chapterIndex: number) => {
 export const getGalleryLastReadChapter = (gallery: Gallery) =>
   gallery.chapters.find(it => it.read === false) ?? gallery.chapters[0];
 
+export const getGalleryLastReadChapterIndex = (gallery: Gallery) =>
+  gallery.chapters.findIndex(it => it.read === false) ?? 0;
+
 export const getGalleryLastReadChapterNumber = (chapter: Chapter) => {
   const cNum = parseInt(chapter.name.split('-')[0].replace(/[^0-9]/gi, ''), 10);
   return isNaN(cNum) ? 0 : cNum;

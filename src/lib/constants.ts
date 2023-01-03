@@ -7,4 +7,5 @@ export const NO_HEADER = {
   headerBackVisible: false,
   headerTransparent: true,
   headerStyle: {},
+  header: () => null,
 };

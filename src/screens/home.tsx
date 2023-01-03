@@ -24,6 +24,7 @@ import { DEFAULT_DIRECTORIES_PATH } from '../lib/constants';
 import {
   getGalleryDetail,
   getGalleryLastReadChapter,
+  getGalleryLastReadChapterIndex,
   getGalleryLastReadChapterNumber,
   mangaStatusLabelDict,
   updateLastReadAt,
@@ -72,6 +73,18 @@ const ListHeader = styled.View`
   flex-direction: row;
 `;
 
+const ProgressBarContainer = styled.View`
+  background-color: #555;
+  margin-top: 8px;
+  height: 4px;
+`;
+
+const ProgressBar = styled.View<{ progress: string }>`
+  background-color: ${props => props.theme.palette.success};
+  height: 4px;
+  width: ${props => props.progress}%;
+`;
+
 enum SortKind {
   NAME = 'Name',
   LAST_READ = 'Last Read',
@@ -114,61 +127,73 @@ const GalleryItem: FC<{
   gallery: Gallery;
   onPress: () => void;
   onLongPress: () => void;
-}> = ({ gallery, onPress, onLongPress }) => (
-  <Pressable onPress={onPress} onLongPress={onLongPress}>
-    <GalleryItemContainer>
-      <GalleryImage
-        source={{
-          uri:
-            gallery.manga?.coverImage.xlarge ??
-            gallery.manga?.coverImage.large ??
-            gallery.manga?.coverImage.medium ??
-            gallery.manga?.bannerImage ??
-            (gallery.chapters.at(0)?.pages.at(0) != null
-              ? `${directoriesPath}/${gallery.path}/${
-                  gallery.chapters.at(0)?.path
-                }/${gallery.chapters.at(0)?.pages.at(0)}`
-              : undefined),
-          width: 100,
-          height: 150,
-        }}
-      />
-      <GalleryContent>
-        <GalleryTitle>
-          {gallery.manga?.title.english ?? gallery.manga?.title.romaji ?? gallery.name}
-        </GalleryTitle>
-        <SecondaryText>
-          {gallery.chapters.length} chapter{gallery.chapters.length !== 1 ? 's' : ''}
-        </SecondaryText>
-        <SecondaryText>
-          {gallery.lastReadAt != null
-            ? `Last Read: ${format(new Date(gallery.lastReadAt), 'Pp')}`
-            : 'Never read'}
-        </SecondaryText>
-        {gallery.manga?.genres != null && (
-          <SecondaryText>Genres: {gallery.manga?.genres.join(', ')}</SecondaryText>
-        )}
-        {gallery.manga?.averageScore != null && (
-          <SecondaryText>Score: {gallery.manga?.averageScore}</SecondaryText>
-        )}
-        {gallery.manga?.status != null && (
-          <SecondaryText>Status: {mangaStatusLabelDict[gallery.manga.status]}</SecondaryText>
-        )}
-        {gallery.filtered && <SecondaryText>Manually Hidden</SecondaryText>}
-        {gallery.manga?.genres != null &&
-          env.filterTags != null &&
-          gallery.manga?.genres.some(genre => env.filterTags.includes(genre)) && (
-            <SecondaryText>Tags Hidden</SecondaryText>
+}> = ({ gallery, onPress, onLongPress }) => {
+  const lastReadChapterIndex = getGalleryLastReadChapterIndex(gallery);
+  const progress = (lastReadChapterIndex / (gallery.chapters.length - 1)) * 100;
+  return (
+    <Pressable onPress={onPress} onLongPress={onLongPress}>
+      <GalleryItemContainer>
+        <GalleryImage
+          source={{
+            uri:
+              gallery.manga?.coverImage.xlarge ??
+              gallery.manga?.coverImage.large ??
+              gallery.manga?.coverImage.medium ??
+              gallery.manga?.bannerImage ??
+              (gallery.chapters.at(0)?.pages.at(0) != null
+                ? `${directoriesPath}/${gallery.path}/${
+                    gallery.chapters.at(0)?.path
+                  }/${gallery.chapters.at(0)?.pages.at(0)}`
+                : undefined),
+            width: 100,
+            height: 150,
+          }}
+        />
+        <GalleryContent>
+          <GalleryTitle>
+            {gallery.manga?.title.english ?? gallery.manga?.title.romaji ?? gallery.name}
+          </GalleryTitle>
+          <SecondaryText>
+            {gallery.chapters.length} chapter{gallery.chapters.length !== 1 ? 's' : ''}
+          </SecondaryText>
+          <SecondaryText>
+            {gallery.lastReadAt != null
+              ? `Last Read: ${format(new Date(gallery.lastReadAt), 'Pp')}`
+              : 'Never read'}
+          </SecondaryText>
+          {gallery.manga?.genres != null && (
+            <SecondaryText>Genres: {gallery.manga?.genres.join(', ')}</SecondaryText>
           )}
-      </GalleryContent>
-      <GalleryItemNumberContainer>
-        <GalleryItemNumber>
-          #{getGalleryLastReadChapterNumber(getGalleryLastReadChapter(gallery))}
-        </GalleryItemNumber>
-      </GalleryItemNumberContainer>
-    </GalleryItemContainer>
-  </Pressable>
-);
+          {gallery.manga?.averageScore != null && (
+            <SecondaryText>Score: {gallery.manga?.averageScore}</SecondaryText>
+          )}
+          {gallery.manga?.status != null && (
+            <SecondaryText>Status: {mangaStatusLabelDict[gallery.manga.status]}</SecondaryText>
+          )}
+          {gallery.filtered && <SecondaryText>Manually Hidden</SecondaryText>}
+          {gallery.manga?.genres != null &&
+            env.filterTags != null &&
+            gallery.manga?.genres.some(genre => env.filterTags.includes(genre)) && (
+              <SecondaryText>Tags Hidden</SecondaryText>
+            )}
+          {progress > 0 && (
+            <>
+              <ProgressBarContainer>
+                <ProgressBar progress={progress.toString()} />
+              </ProgressBarContainer>
+              <SecondaryText>{progress.toFixed(1)}%</SecondaryText>
+            </>
+          )}
+        </GalleryContent>
+        <GalleryItemNumberContainer>
+          <GalleryItemNumber>
+            #{getGalleryLastReadChapterNumber(getGalleryLastReadChapter(gallery))}
+          </GalleryItemNumber>
+        </GalleryItemNumberContainer>
+      </GalleryItemContainer>
+    </Pressable>
+  );
+};
 
 export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
   const dimensions = useWindowDimensions();
