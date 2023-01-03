@@ -32,17 +32,21 @@ const TextInputStyled = styled(TextInput)`
 
 const Container = styled.View`
   padding: 0 8px;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 8px;
 `;
 
 const InputLabel = styled(PrimaryText)`
   font-size: 20px;
   margin-top: 8px;
+  width: 70px;
 `;
 
 const InputContainer = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-bottom: 16px;
+  flex: 1;
 `;
 
 const Title = styled(PrimaryText)`
@@ -120,10 +124,18 @@ const LocalGallery: FC<{
 export const DownloadScreen: FC<DownloadScreenProps> = ({ navigation }) => {
   const dimensions = useWindowDimensions();
   const { url, setUrl, local, handleSearchLocal, loading } = useServerUrl();
+  const [search, setSearch] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>();
 
   const galleries = useGalleries();
+
+  const filteredSearch = useMemo(() => {
+    if (search === '') {
+      return local?.data;
+    }
+    return local?.data.filter(it => it.name.toLowerCase().includes(search.toLowerCase()));
+  }, [local, search]);
 
   const renderItem = (it: ListRenderItemInfo<LocalAPIData>) => (
     <LocalGallery
@@ -188,7 +200,7 @@ export const DownloadScreen: FC<DownloadScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={{ height: dimensions.height - 100 }}>
       <Container>
-        <InputLabel>Server url:</InputLabel>
+        <InputLabel>Server:</InputLabel>
         <InputContainer>
           <TextInputStyled
             value={url}
@@ -201,9 +213,20 @@ export const DownloadScreen: FC<DownloadScreenProps> = ({ navigation }) => {
           />
         </InputContainer>
       </Container>
+      <Container>
+        <InputLabel>Search:</InputLabel>
+        <InputContainer>
+          <TextInputStyled
+            value={search}
+            onChangeText={setSearch}
+            returnKeyLabel="Search"
+            keyboardAppearance="dark"
+          />
+        </InputContainer>
+      </Container>
       {local?.data != null ? (
         <FlatList
-          data={local?.data ?? []}
+          data={filteredSearch ?? []}
           renderItem={renderItem}
           ListHeaderComponent={
             <Container>
