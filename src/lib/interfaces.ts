@@ -14,6 +14,7 @@ export interface Gallery extends Node {
   lastReadAt?: string;
   chapters: Chapter[];
   manga?: Manga;
+  filtered?: boolean;
 }
 
 export type GalleryInput = Omit<Gallery, 'id'>;
@@ -44,7 +45,8 @@ export interface Manga extends Node {
   favorites: number;
   site_url: string;
   title: {
-    english: string;
+    english?: string;
+    romaji?: string;
   };
 }
 

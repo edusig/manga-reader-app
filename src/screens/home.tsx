@@ -18,13 +18,14 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useGalleries } from '../hooks/use-galleries';
-import { checkGallery } from '../lib/anilist';
+import { checkGallery, clearGalleryInfo } from '../lib/anilist';
 import { env } from '../lib/config';
 import { DEFAULT_DIRECTORIES_PATH } from '../lib/constants';
 import {
   getGalleryDetail,
   getGalleryLastReadChapter,
   getGalleryLastReadChapterNumber,
+  mangaStatusLabelDict,
   updateLastReadAt,
 } from '../lib/gallery';
 import { Gallery, RootStackParamList } from '../lib/interfaces';
@@ -62,8 +63,8 @@ const GalleryItemNumber = styled(SecondaryText)`
 `;
 
 const GalleryImage = styled(Image as any)`
-  width: 80px;
-  height: 120px;
+  width: 100px;
+  height: 150px;
 `;
 
 const ListHeader = styled.View`
@@ -75,6 +76,7 @@ enum SortKind {
   NAME = 'Name',
   LAST_READ = 'Last Read',
   CHAPTER_COUNT = 'Chapter Count',
+  SCORE = 'Score',
 }
 
 enum SortOrder {
@@ -101,6 +103,9 @@ const sortKinds: Record<SortKind, { sort: (a: Gallery, b: Gallery) => number }> 
   [SortKind.CHAPTER_COUNT]: {
     sort: (a: Gallery, b: Gallery) => a.chapters.length - b.chapters.length,
   },
+  [SortKind.SCORE]: {
+    sort: (a: Gallery, b: Gallery) => (a.manga?.averageScore ?? 0) - (b.manga?.averageScore ?? 0),
+  },
 };
 
 const directoriesPath = `${FileSystem.documentDirectory}${DEFAULT_DIRECTORIES_PATH}`;
@@ -112,14 +117,49 @@ const GalleryItem: FC<{
 }> = ({ gallery, onPress, onLongPress }) => (
   <Pressable onPress={onPress} onLongPress={onLongPress}>
     <GalleryItemContainer>
-      <GalleryImage source={{ uri: gallery.manga?.coverImage.medium, width: 80, height: 120 }} />
+      <GalleryImage
+        source={{
+          uri:
+            gallery.manga?.coverImage.xlarge ??
+            gallery.manga?.coverImage.large ??
+            gallery.manga?.coverImage.medium ??
+            gallery.manga?.bannerImage ??
+            (gallery.chapters.at(0)?.pages.at(0) != null
+              ? `${directoriesPath}/${gallery.path}/${
+                  gallery.chapters.at(0)?.path
+                }/${gallery.chapters.at(0)?.pages.at(0)}`
+              : undefined),
+          width: 100,
+          height: 150,
+        }}
+      />
       <GalleryContent>
-        <GalleryTitle allowFontScaling>{gallery.name}</GalleryTitle>
-        <SecondaryText allowFontScaling>
-          {gallery.chapters.length} chapters -{' '}
-          {gallery.lastReadAt != null ? format(new Date(gallery.lastReadAt), 'Pp') : 'Never read'}
+        <GalleryTitle>
+          {gallery.manga?.title.english ?? gallery.manga?.title.romaji ?? gallery.name}
+        </GalleryTitle>
+        <SecondaryText>
+          {gallery.chapters.length} chapter{gallery.chapters.length !== 1 ? 's' : ''}
         </SecondaryText>
-        <SecondaryText allowFontScaling>{gallery.manga?.genres.join(', ')}</SecondaryText>
+        <SecondaryText>
+          {gallery.lastReadAt != null
+            ? `Last Read: ${format(new Date(gallery.lastReadAt), 'Pp')}`
+            : 'Never read'}
+        </SecondaryText>
+        {gallery.manga?.genres != null && (
+          <SecondaryText>Genres: {gallery.manga?.genres.join(', ')}</SecondaryText>
+        )}
+        {gallery.manga?.averageScore != null && (
+          <SecondaryText>Score: {gallery.manga?.averageScore}</SecondaryText>
+        )}
+        {gallery.manga?.status != null && (
+          <SecondaryText>Status: {mangaStatusLabelDict[gallery.manga.status]}</SecondaryText>
+        )}
+        {gallery.filtered && <SecondaryText>Manually Hidden</SecondaryText>}
+        {gallery.manga?.genres != null &&
+          env.filterTags != null &&
+          gallery.manga?.genres.some(genre => env.filterTags.includes(genre)) && (
+            <SecondaryText>Tags Hidden</SecondaryText>
+          )}
       </GalleryContent>
       <GalleryItemNumberContainer>
         <GalleryItemNumber>
@@ -160,6 +200,10 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
           ),
     [sortedGalleries, showFilteredTags],
   );
+  const manualFilteredGalleries = useMemo(
+    () => filteredGalleries.filter(it => showFilteredTags || !it.filtered),
+    [filteredGalleries],
+  );
 
   const handleDeleteGallery = (id: number) => async () => {
     setIsLoading(true);
@@ -179,16 +223,26 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
     navigation.push('Read', { gallery, chapter: latest });
   };
   const getManga = (gallery: Gallery) => {
-    checkGallery(gallery);
+    if (gallery.manga != null) clearGalleryInfo(gallery);
+    else checkGallery(gallery);
   };
   const handleGalleryPress = (gallery: Gallery) => () => {
     if (gallery.chapters.length > 0) return handleReadLatest(gallery)();
     navigation.push('Gallery', { gallery });
   };
+  const handleGalleryFilterToggle = (gallery: Gallery) => {
+    galleryStorage.updateItem({ ...gallery, filtered: !gallery.filtered });
+  };
   const handleGalleryLongPress = (gallery: Gallery) => () => {
     showActionSheetWithOptions(
       {
-        options: ['Delete', 'Read', 'View Chapters', 'Get manga info', 'Cancel'],
+        options: [
+          'Delete',
+          gallery.filtered ? 'Show/Remove filter' : 'Hide/Filter',
+          'View Chapters',
+          gallery.manga != null ? 'Remove manga info' : 'Get manga info',
+          'Cancel',
+        ],
         cancelButtonIndex: 4,
         userInterfaceStyle: 'dark',
         destructiveButtonIndex: 0,
@@ -207,7 +261,7 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
             { cancelable: true },
           );
         }
-        if (index === 1) return handleReadLatest(gallery)();
+        if (index === 1) return handleGalleryFilterToggle(gallery);
         if (index === 2) return navigation.push('Gallery', { gallery });
         if (index === 3) return getManga(gallery);
       },
@@ -217,12 +271,12 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
     showActionSheetWithOptions(
       {
         options: Object.keys(sortKinds).concat(['Cancel']),
-        cancelButtonIndex: 3,
+        cancelButtonIndex: 4,
         userInterfaceStyle: 'dark',
         title: 'Choose the sorting key',
       },
       index => {
-        if (index != null && index < 3) {
+        if (index != null && index < 4) {
           setSortKind(Object.keys(sortKinds)[index] as SortKind);
           setSortOrder(SortOrder.ASC);
         }
@@ -285,10 +339,10 @@ export const HomeScreen: FC<HomeScreenProps> = ({ navigation }) => {
         <Button color="white" title={`Order direction: ${sortOrder}`} onPress={handleSortOrder} />
       </ListHeader>
       <Pressable style={{ marginVertical: 8 }} onPress={handleAdvancedDetails}>
-        <Text style={{ color: 'white' }}>Showing {filteredGalleries.length} galleries</Text>
+        <Text style={{ color: 'white' }}>Showing {manualFilteredGalleries.length} galleries</Text>
       </Pressable>
       <FlatList
-        data={filteredGalleries}
+        data={manualFilteredGalleries}
         renderItem={renderItem}
         keyExtractor={it => it.id.toString()}
         ListEmptyComponent={<EmptyText>No galleries found.</EmptyText>}

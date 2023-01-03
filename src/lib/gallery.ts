@@ -3,7 +3,7 @@ import { DEFAULT_DIRECTORIES_PATH } from './constants';
 import { Chapter, Gallery, GalleryInput, MangaStatus } from './interfaces';
 import { galleryStorage } from './storage';
 
-const mangaStatusLabelDict: Record<MangaStatus, string> = {
+export const mangaStatusLabelDict: Record<MangaStatus, string> = {
   [MangaStatus.CANCELLED]: 'Cancelled',
   [MangaStatus.FINISHED]: 'Finished',
   [MangaStatus.HIATUS]: 'Hiatus',
@@ -25,20 +25,22 @@ export const readChapter = (galleryId: number, chapterIndex: number) => {
 export const getGalleryLastReadChapter = (gallery: Gallery) =>
   gallery.chapters.find(it => it.read === false) ?? gallery.chapters[0];
 
-export const getGalleryLastReadChapterNumber = (chapter: Chapter) =>
-  parseInt(chapter.name.split('-')[0].replace(/[^0-9]/gi, ''), 10);
+export const getGalleryLastReadChapterNumber = (chapter: Chapter) => {
+  const cNum = parseInt(chapter.name.split('-')[0].replace(/[^0-9]/gi, ''), 10);
+  return isNaN(cNum) ? 0 : cNum;
+};
 
 export const getGalleryDetail = (gallery: Gallery) => {
   const infos = [];
   if (gallery.manga?.favorites) {
     infos.push(`Favorites: ${gallery.manga.favorites}`);
   }
-  if (gallery.manga?.status) {
-    infos.push(`Status: ${mangaStatusLabelDict[gallery.manga.status]}`);
-  }
-  if (gallery.manga?.averageScore) {
-    infos.push(`Average Score: ${gallery.manga.averageScore}`);
-  }
+  // if (gallery.manga?.status) {
+  //   infos.push(`Status: ${mangaStatusLabelDict[gallery.manga.status]}`);
+  // }
+  // if (gallery.manga?.averageScore) {
+  //   infos.push(`Average Score: ${gallery.manga.averageScore}`);
+  // }
   if (gallery.manga?.description) {
     infos.push(
       `Description: ${gallery.manga.description

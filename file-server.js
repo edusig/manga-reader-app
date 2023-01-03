@@ -50,7 +50,7 @@ const dirWalk = async (currentDir, depth = 2) => {
       const resolved = parts.slice(0, idx + 1).join(path.sep);
       if (!current.has(resolved)) {
         current.set(resolved, {
-          name: it,
+          name: it.replace("'", ''),
           files: idx >= parts.length - 1 ? [] : new Map(),
           fullPath: resolved,
         });
@@ -60,6 +60,18 @@ const dirWalk = async (currentDir, depth = 2) => {
     current.push(file);
     return acc;
   }, new Map());
+
+  tree.forEach(value => {
+    if (Array.isArray(value.files)) {
+      const valueFiles = value.files.slice(0);
+      const fullPath = `${value.name}/Single Chapter`;
+      value.files = new Map([[fullPath, { name: 'Single Chapter', files: valueFiles, fullPath }]]);
+    } else {
+      console.dir(value);
+    }
+  });
+
+  // console.dir(tree);
   return tree;
 };
 
@@ -81,7 +93,8 @@ const listDirs = async res => {
 const download = async (req, res) => {
   if (req.url.startsWith('/favicon.ico')) return res.end();
   try {
-    const subpath = path.join(rootDir, decodeURIComponent(req.url));
+    const reqUrl = decodeURIComponent(req.url).replace('/Single Chapter', '');
+    const subpath = path.join(rootDir, reqUrl);
     const stat = await fs.promises.lstat(subpath);
     const ext = path.extname(subpath).replace('.', '');
     const mime = extToMimeDict[ext];
