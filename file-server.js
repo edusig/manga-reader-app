@@ -66,8 +66,6 @@ const dirWalk = async (currentDir, depth = 2) => {
       const valueFiles = value.files.slice(0);
       const fullPath = `${value.name}/Single Chapter`;
       value.files = new Map([[fullPath, { name: 'Single Chapter', files: valueFiles, fullPath }]]);
-    } else {
-      console.dir(value);
     }
   });
 
